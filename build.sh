@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# add via `crontab -e`:
+#
+#   05 */3 * * * /usr/bin/flock -w 0 $HOME/src/docker-nginx/.lock $HOME/src/docker-nginx/build.sh 2>&1 >> /var/log/build/docker-nginx.log
+
 SRC=$(realpath $(cd -P "$( dirname "${BASH_SOURCE[0]}")" && pwd))
 
 # http://nginx.org/en/download.html
@@ -12,6 +16,67 @@ NGINX_VERSION=
 LIBRESSL_VERSION=
 PCRE_VERSION=
 ZLIB_VERSION=
+
+NOTIFY_TEAM=dev
+NOTIFY_CHANNEL=town-square
+
+HOST=$(jq -r .brankas.instanceUrl $HOME/.config/mmctl)
+TOKEN=$(jq -r .brankas.authToken $HOME/.config/mmctl)
+
+mmcurl() {
+  local method=$1
+  local url=$HOST/api/v4/$2
+  if [ ! -z "$3" ]; then
+    body="-d"
+  fi
+  curl \
+    -s \
+    -m 30 \
+    -X $method \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $TOKEN" \
+    $body "$3" \
+    $url
+}
+
+NOTIFY_TEAMID=$(mmcurl GET teams/name/$NOTIFY_TEAM|jq -r '.id')
+NOTIFY_CHANNELID=$(mmcurl GET teams/$NOTIFY_TEAMID/channels/name/$NOTIFY_CHANNEL|jq -r '.id')
+
+mmfile() {
+  local url=$HOST/api/v4/files
+  curl \
+    -s \
+    -H "Authorization: Bearer $TOKEN" \
+    -F "channel_id=$NOTIFY_CHANNELID" \
+    -F "files=@$1" \
+    $url
+}
+
+mmpost() {
+  local message="$1"
+  shift
+  local files=''
+  while (( "$#" )); do
+    files+="\"$1\", "
+    shift
+  done
+  if [ ! -z "$files" ]; then
+    files=$(echo -e ',\n  "file_ids": ['$(sed -e 's/, $//' <<< "$files")']')
+  fi
+  POST=$(cat << END
+{
+  "channel_id": "$NOTIFY_CHANNELID",
+  "message": "$message"$files
+}
+END
+)
+  mmcurl POST posts "$POST"
+}
+
+if [[ -z "$NOTIFY_TEAMID" || -z "$NOTIFY_CHANNELID" ]]; then
+  echo "ERROR: unable to determine NOTIFY_TEAMID or NOTIFY_CHANNELID, exiting ($(date))"
+  exit 1
+fi
 
 set -e
 
@@ -44,6 +109,11 @@ git_grab() {
   git pull
   popd &> /dev/null
 }
+
+pushd $SRC &> /dev/null
+
+echo "------------------------------------------------------------"
+echo "STARTING ($(date))"
 
 # latest versions
 if [ -z "$NGINX_VERSION" ]; then
@@ -78,14 +148,21 @@ grab https://www.zlib.net zlib-$ZLIB_VERSION
 
 git_grab openresty/headers-more-nginx-module
 
-touch $SRC/.build
-SUM=$(md5sum <<< "$BUILD")
-CURRENT=$(md5sum $SRC/.build)
+touch $SRC/.last
+LAST=$(md5sum <<< "$BUILD"|awk '{print $1}')
+CURRENT=$(md5sum $SRC/.last|awk '{print $1}')
 
-if [ "$SUM" != "$CURRENT" ]; then
+echo "LAST:     $LAST"
+echo "CURRENT:  $CURRENT"
+
+if [ "$LAST" = "$CURRENT" ]; then
+  echo "SKIPPING: LAST($LAST) == CURRENT($CURRENT)"
+else
   # force bitnami nginx image version in dockerfile
   perl -pi -e "s|FROM bitnami/nginx:.*|FROM bitnami/nginx:$BITNAMI_VERSION|" $SRC/Dockerfile
   (set -x;
+    docker pull bitnami/nginx:$BITNAMI_VERSION
+    docker pull debian:stable-slim
     docker build \
       --pull \
       --progress=plain \
@@ -98,12 +175,22 @@ if [ "$SUM" != "$CURRENT" ]; then
       --file Dockerfile \
       .
   )
-  cat <<< "$BUILD" > $SRC/.build
-else
-  echo "SKIPPING BUILD ($SUM == $CURRENT)"
+  cat <<< "$BUILD" > $SRC/.last
 fi
 
-(set -x;
-  docker push kenshaw/nginx:$NGINX_VERSION
-  docker push kenshaw/nginx:latest
-)
+if [ ! -f $SRC/cache/$CURRENT.docker_push_done ]; then
+  (set -x;
+    docker push kenshaw/nginx:$NGINX_VERSION
+    docker push kenshaw/nginx:latest
+  )
+  # notify
+  HASH=$(docker inspect --format='{{index .RepoDigests 0}}' kenshaw/nginx:$NGINX_VERSION|awk -F: '{print $2}')
+  LINK=$(printf 'https://hub.docker.com/layers/kenshaw/nginx/%s/images/sha256-%s?context=explore' $VERSION $HASH)
+  TAGS='`'$NGINX_VERSION'`, `latest`'
+  mmpost "Pushed kenshaw/nginx ($TAGS) to Docker hub: [kenshaw/nginx:$NGINX_VERSION]($LINK)"
+  touch $SRC/cache/$CURRENT.docker_push_done
+fi
+
+echo "DONE ($(date))"
+
+popd &> /dev/null
