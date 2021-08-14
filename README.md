@@ -7,10 +7,10 @@ Available on [Docker hub][docker-hub].
 
 Kept up-to-date via automated build/push. Used in production.
 
-# Use
+## Use
 
 ```sh
-$ docker pull kenshaw/nginx:latest
+docker pull kenshaw/nginx:latest
 ```
 
-[docker-hub]: https://hub.docker.com/r/kenshaw/nginx
+[docker-hub]: https://hub.docker.com/r/kenshaw/nginx/tags?page=1&ordering=last_updated
