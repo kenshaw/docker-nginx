@@ -163,7 +163,8 @@ else
   (set -x;
     docker pull bitnami/nginx:$BITNAMI_VERSION
     docker pull debian:buster-slim
-    docker build \
+    DOCKER_BUILDKIT=1 \
+      docker build \
       --pull \
       --progress=plain \
       --build-arg NGINX_VERSION=$NGINX_VERSION \
