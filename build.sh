@@ -162,7 +162,7 @@ else
   perl -pi -e "s|FROM bitnami/nginx:.*|FROM bitnami/nginx:$BITNAMI_VERSION|" $SRC/Dockerfile
   (set -x;
     docker pull bitnami/nginx:$BITNAMI_VERSION
-    docker pull debian:stable-slim
+    docker pull debian:buster-slim
     docker build \
       --pull \
       --progress=plain \

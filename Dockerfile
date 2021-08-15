@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:experimental
 
-FROM debian:stable-slim AS builder
+FROM debian:buster-slim AS builder
 ARG NGINX_VERSION
 ARG LIBRESSL_VERSION
 ARG PCRE_VERSION
