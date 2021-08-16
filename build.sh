@@ -20,8 +20,8 @@ ZLIB_VERSION=
 NOTIFY_TEAM=dev
 NOTIFY_CHANNEL=town-square
 
-HOST=$(jq -r .docker-nginx.instanceUrl $HOME/.config/mmctl)
-TOKEN=$(jq -r .docker-nginx.authToken $HOME/.config/mmctl)
+HOST=$(jq -r '.["docker-nginx"].instanceUrl' $HOME/.config/mmctl)
+TOKEN=$(jq -r '.["docker-nginx"].authToken' $HOME/.config/mmctl)
 
 mmcurl() {
   local method=$1
