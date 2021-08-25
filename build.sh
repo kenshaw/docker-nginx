@@ -186,7 +186,7 @@ if [ ! -f $SRC/cache/$CURRENT.docker_push_done ]; then
   )
   # notify
   HASH=$(docker inspect --format='{{index .RepoDigests 0}}' kenshaw/nginx:$NGINX_VERSION|awk -F: '{print $2}')
-  LINK=$(printf 'https://hub.docker.com/layers/kenshaw/nginx/%s/images/sha256-%s?context=explore' $VERSION $HASH)
+  LINK=$(printf 'https://hub.docker.com/layers/kenshaw/nginx/%s/images/sha256-%s?context=explore' $NGINX_VERSION $HASH)
   TAGS='`'$NGINX_VERSION'`, `latest`'
   mmpost "Pushed kenshaw/nginx ($TAGS) to Docker hub: [kenshaw/nginx:$NGINX_VERSION]($LINK)"
   touch $SRC/cache/$CURRENT.docker_push_done
