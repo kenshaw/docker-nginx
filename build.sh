@@ -123,7 +123,7 @@ if [ -z "$LIBRESSL_VERSION" ]; then
   LIBRESSL_VERSION=$(wget -qO- https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/|sed -E -n 's/.*<a .+?>libressl-([0-9]+\.[0-9]+\.[0-9]+)\.tar\.gz<.*/\1/p'|sort -r -V|head -1)
 fi
 if [ -z "$PCRE_VERSION" ]; then
-  PCRE_VERSION=$(wget -qO- https://ftp.pcre.org/pub/pcre|sed -E -n 's/.*<a .+?>pcre-([0-9]+\.[0-9]+)\.tar\.gz<.*/\1/p'|sort -r -V|head -1)
+  PCRE_VERSION=$(wget -qO- https://ftp.exim.org/pub/pcre|sed -E -n 's/.*<a .+?>pcre-([0-9]+\.[0-9]+)\.tar\.gz<.*/\1/p'|sort -r -V|head -1)
 fi
 if [ -z "$ZLIB_VERSION" ]; then
   ZLIB_VERSION=$(wget -qO- https://www.zlib.net|sed -E -n 's/.*<b>\s*zlib\s*([0-9]+\.[0-9]+\.[0-9]+)<.*/\1/ip'|sort -r -V|head -1)
@@ -143,7 +143,7 @@ cat <<< "$BUILD"
 
 grab https://nginx.org/download nginx-$NGINX_VERSION
 grab https://ftp.openbsd.org/pub/OpenBSD/LibreSSL libressl-$LIBRESSL_VERSION
-grab https://ftp.pcre.org/pub/pcre pcre-$PCRE_VERSION
+grab https://ftp.exim.org/pub/pcre pcre-$PCRE_VERSION
 grab https://www.zlib.net zlib-$ZLIB_VERSION
 
 git_grab openresty/headers-more-nginx-module
